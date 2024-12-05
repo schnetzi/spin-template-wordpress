@@ -1,0 +1,63 @@
+services:
+  traefik:
+    ports:
+    - "80:80"
+    - "443:443"
+    networks:
+      development:
+        aliases:
+            - wordpress.dev.test
+    volumes:
+      # Mount the Docker socket as read-only so Traefik can listen to events
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./.infrastructure/conf/traefik/dev/traefik.yml:/traefik.yml:ro
+      - ./.infrastructure/conf/traefik/dev/traefik-certs.yml:/traefik-certs.yml
+      - ./.infrastructure/conf/traefik/dev/certificates/:/certificates
+
+  php:
+    build:
+      target: development
+      args:
+        USER_ID: ${SPIN_USER_ID}
+        GROUP_ID: ${SPIN_GROUP_ID}
+    volumes:
+      - .:/var/www/html/
+    networks:
+      - development
+    depends_on:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wordpress.rule=HostRegexp(`wordpress.dev.test`)"
+      - "traefik.http.routers.wordpress.tls=true"
+      - "traefik.http.routers.wordpress.entrypoints=websecure"
+      - "traefik.http.services.wordpress.loadbalancer.server.port=8080"
+      - "traefik.http.services.wordpress.loadbalancer.server.scheme=http"
+
+  mariadb:
+    hostname: "wordpress_mariadb"
+    networks:
+      - development
+    environment:
+        MARIADB_ROOT_PASSWORD: "rootpassword"
+        MARIADB_DATABASE: "wordpress"
+        MARIADB_USER: "wordpress_database_user"
+        MARIADB_PASSWORD: "wordpress_database_password"
+    volumes:
+      # Add volume for all database files
+      - ./.infrastructure/volume_data/mysql/database_data/:/var/lib/mysql
+      # Add volume for custom configurations
+      - ./.infrastructure/volume_data/mysql/conf.d/:/etc/mysql/conf.d
+      - ./.infrastructure/volume_data/mysql/docker-entrypoint-initdb.d/:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"
+
+  mailpit:
+      image: axllent/mailpit
+      networks:
+        - development
+      ports:
+        - "8025:8025"
+
+networks:
+  development:
