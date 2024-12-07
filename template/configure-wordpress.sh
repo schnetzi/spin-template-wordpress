@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ -f "$project_dir/public/wp-config.php" ]; then
+    echo "Already existing wp-config.php. Do not overwrite."
+    return 0
+fi
+
 source "$project_dir/.env"
 salts=$(curl -s https://api.wordpress.org/secret-key/1.1/salt/)
 

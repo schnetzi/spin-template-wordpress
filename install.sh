@@ -189,6 +189,13 @@ new(){
 init(){
   local force_flag=""
 
+  mkdir -p public
+  for item in "$SPIN_PROJECT_DIRECTORY"/*; do
+    if [ "$(basename "$item")" != "public" ]; then
+      mv "$item" "$SPIN_PROJECT_DIRECTORY/public/"
+    fi
+  done
+
   # Check if --force flag is set
   for arg in "$@"; do
     if [ "$arg" == "--force" ]; then
