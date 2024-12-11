@@ -5,11 +5,17 @@ if [ -f "$project_dir/public/wp-config.php" ]; then
     return 0
 fi
 
-source "$project_dir/.env"
 salts=$(curl -s https://api.wordpress.org/secret-key/1.1/salt/)
 
 cat <<EOF >"$project_dir/public/wp-config.php"
 <?php
+/** @desc this loads the composer autoload file */
+require_once dirname( __DIR__ ) . '/vendor/autoload.php';
+
+/** @desc this instantiates Dotenv and passes in our path to .env */
+\$dotenv = Dotenv\Dotenv::createImmutable(dirname(__DIR__));
+\$dotenv->safeLoad();
+
 /**
  * The base configuration for WordPress
  *
@@ -31,13 +37,13 @@ cat <<EOF >"$project_dir/public/wp-config.php"
 
 // ** Database settings - You can get this info from your web host ** //
 /** The name of the database for WordPress */
-define('DB_NAME', '$MARIADB_DATABASE');
+defined('DB_NAME') or define('DB_NAME', \$_ENV['MARIADB_DATABASE']);
 
 /** Database username */
-define('DB_USER', '$MARIADB_USER');
+defined('DB_USER') or define('DB_USER', \$_ENV['MARIADB_USER']);
 
 /** Database password */
-define('DB_PASSWORD', '$MARIADB_PASSWORD');
+defined('DB_PASSWORD') or define('DB_PASSWORD', \$_ENV['MARIADB_PASSWORD']);
 
 /** Database hostname */
 define( 'DB_HOST', 'mariadb' );
@@ -49,8 +55,8 @@ define( 'DB_CHARSET', 'utf8' );
 define( 'DB_COLLATE', '' );
 
 /** WordPress Tweaks */
-define( 'WP_HOME', '$APP_URL' );
-define( 'WP_SITEURL', '$APP_URL' );
+defined('WP_HOME') or define('WP_HOME', \$_ENV['APP_URL']);
+defined('WP_SITEURL') or define('WP_SITEURL', \$_ENV['APP_URL']);
 define( 'FORCE_SSL_ADMIN', true );
 #define( 'WP_MEMORY_LIMIT', '256M' );
 

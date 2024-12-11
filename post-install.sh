@@ -128,6 +128,12 @@ set_colors() {
     fi
 }
 
+prepare_wordpress_env() {
+    echo "Preparing WordPress environments..."
+    (cd $project_dir && spin run php composer require vlucas/phpdotenv)
+    echo "Done preparing WordPress environments."
+}
+
 configure_wordpress() {
     echo "Configuring WordPress..."
     source "$project_dir/configure-wordpress.sh"
@@ -158,6 +164,7 @@ process_selections
 
 # Configure APP_URL
 cp "$project_dir/.env.example" "$project_dir/.env"
+prepare_wordpress_env
 configure_wordpress
 
 # Configure Let's Encrypt
