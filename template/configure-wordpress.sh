@@ -105,7 +105,6 @@ if (\$_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https')
 if (isset(\$_SERVER['HTTP_X_FORWARDED_HOST'])) {
     \$_SERVER['HTTP_HOST'] = \$_SERVER['HTTP_X_FORWARDED_HOST'];
 }
-define( 'FORCE_SSL_ADMIN', true );
 
 /* Add any custom values between this line and the "stop editing" line. */
 
