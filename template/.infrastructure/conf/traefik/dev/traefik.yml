@@ -6,8 +6,8 @@ providers:
   docker:
     exposedByDefault: false
   file:
-      filename: /traefik-certs.yml
-      watch: true
+    filename: /traefik-certs.yml
+    watch: true
 entryPoints:
   web:
     address: ":80"

@@ -1,12 +1,12 @@
 services:
   traefik:
     ports:
-    - "80:80"
-    - "443:443"
+      - "80:80"
+      - "443:443"
     networks:
       development:
         aliases:
-            - wordpress.dev.test
+          - wordpress.dev.test
     volumes:
       # Mount the Docker socket as read-only so Traefik can listen to events
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -39,10 +39,10 @@ services:
     networks:
       - development
     environment:
-        MARIADB_ROOT_PASSWORD: "rootpassword"
-        MARIADB_DATABASE: "wordpress"
-        MARIADB_USER: "wordpress_database_user"
-        MARIADB_PASSWORD: "wordpress_database_password"
+      MARIADB_ROOT_PASSWORD: "rootpassword"
+      MARIADB_DATABASE: "wordpress"
+      MARIADB_USER: "wordpress_database_user"
+      MARIADB_PASSWORD: "wordpress_database_password"
     volumes:
       # Add volume for all database files
       - ./.infrastructure/volume_data/mysql/database_data/:/var/lib/mysql
@@ -53,11 +53,11 @@ services:
       - "3306:3306"
 
   mailpit:
-      image: axllent/mailpit
-      networks:
-        - development
-      ports:
-        - "8025:8025"
+    image: axllent/mailpit
+    networks:
+      - development
+    ports:
+      - "8025:8025"
 
 networks:
   development:

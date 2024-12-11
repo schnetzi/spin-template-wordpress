@@ -21,24 +21,24 @@ redis=""
 add_php_extensions() {
     echo "${BLUE}Adding custom PHP extensions...${RESET}"
     local dockerfile="$project_dir/$php_dockerfile"
-    
+
     # Check if Dockerfile exists
     if [ ! -f "$dockerfile" ]; then
         echo "Error: $dockerfile not found."
         return 1
     fi
-    
+
     # Uncomment the USER root line
     line_in_file --action replace --file "$dockerfile" "# USER root" "USER root"
-    
+
     # Add RUN command to install extensions
     local extensions_string="${php_extensions[*]}"
     line_in_file --action replace --file "$dockerfile" "# RUN install-php-extensions" "RUN install-php-extensions $extensions_string"
-    
+
     echo "Custom PHP extensions added."
 }
 
-process_selections() { 
+process_selections() {
     [[ $mariadb ]] && configure_mariadb
     echo "Services configured."
 }
@@ -67,7 +67,7 @@ select_php_extensions() {
     read -r extensions_input
 
     # Remove spaces and split into array
-    IFS=',' read -r -a php_extensions <<< "${extensions_input// /}"
+    IFS=',' read -r -a php_extensions <<<"${extensions_input// /}"
 
     # Print selected extensions for confirmation
     while true; do
@@ -168,7 +168,6 @@ prompt_and_update_file \
     --file "$project_dir/.infrastructure/conf/traefik/prod/traefik.yml" \
     --search-default "changeme@example.com" \
     --success-msg "Updated \".infrastructure/conf/traefik/prod/traefik.yml\" with your email."
-
 
 if [[ "$SPIN_INSTALL_DEPENDENCIES" == "true" ]]; then
     if [[ "$docker_compose_database_migration" == "true" ]]; then

@@ -29,7 +29,7 @@ serversTransport:
 providers:
   swarm:
     endpoint: "unix:///var/run/docker.sock"
-    exposedByDefault: false  
+    exposedByDefault: false
 
 entryPoints:
   web:

@@ -8,6 +8,6 @@ services:
       - traefik
     environment:
       APACHE_DOCUMENT_ROOT: "/var/www/html/public/"
-  
+
   mariadb:
     image: mariadb:10.5

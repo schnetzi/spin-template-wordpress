@@ -8,7 +8,7 @@ fi
 source "$project_dir/.env"
 salts=$(curl -s https://api.wordpress.org/secret-key/1.1/salt/)
 
-cat <<EOF > "$project_dir/public/wp-config.php"
+cat <<EOF >"$project_dir/public/wp-config.php"
 <?php
 /**
  * The base configuration for WordPress
