@@ -38,11 +38,6 @@ services:
     hostname: "wordpress_mariadb"
     networks:
       - development
-    environment:
-      MARIADB_ROOT_PASSWORD: "rootpassword"
-      MARIADB_DATABASE: "wordpress"
-      MARIADB_USER: "wordpress_database_user"
-      MARIADB_PASSWORD: "wordpress_database_password"
     volumes:
       # Add volume for all database files
       - ./.infrastructure/volume_data/mysql/database_data/:/var/lib/mysql
