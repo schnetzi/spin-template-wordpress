@@ -60,6 +60,11 @@ defined('WP_SITEURL') or define('WP_SITEURL', \$_ENV['APP_URL']);
 define( 'FORCE_SSL_ADMIN', true );
 #define( 'WP_MEMORY_LIMIT', '256M' );
 
+/** Redis */
+define('WP_REDIS_HOST', 'redis');
+define('WP_REDIS_PORT', '6379');
+defined('WP_REDIS_PASSWORD') or define('WP_REDIS_PASSWORD', \$_ENV['REDIS_PASSWORD']);
+
 /**#@+
  * Authentication unique keys and salts.
  *

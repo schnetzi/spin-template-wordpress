@@ -47,6 +47,12 @@ services:
     ports:
       - "3306:3306"
 
+  redis:
+    volumes:
+      - ./.infrastructure/volume_data/redis/data:/data
+    networks:
+      - development
+
   mailpit:
     image: axllent/mailpit
     networks:

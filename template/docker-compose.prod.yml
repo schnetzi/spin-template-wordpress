@@ -86,6 +86,18 @@ services:
       - mariadb_data:/var/lib/mysql
       - mariadb_custom_conf:/etc/mysql/conf.d
       - mariadb_shared:/shared
+  
+  redis:
+    volumes:
+      - redis_data:/data
+    networks:
+      - web-public
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
 
 configs:
   traefik:
@@ -97,6 +109,7 @@ volumes:
   mariadb_data:
   mariadb_custom_conf:
   mariadb_shared:
+  redis_data:
   wp-content:
 
 networks:
