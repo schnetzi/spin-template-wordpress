@@ -38,7 +38,13 @@ services:
     networks:
       - web-public
     volumes:
+      # Map the entire wp-content folder, excluding specific subdirectories
       - wp-content:/var/www/html/public/wp-content
+      # Use the container's versions for specific subdirectories
+      - /var/www/html/public/wp-content/languages
+      - /var/www/html/public/wp-content/plugins
+      - /var/www/html/public/wp-content/themes
+      - /var/www/html/public/wp-content/upgrade
 
     deploy:
       replicas: 1
@@ -72,11 +78,6 @@ services:
   mariadb:
     networks:
       - web-public
-    environment:
-      MARIADB_RANDOM_ROOT_PASSWORD: "${MARIADB_ROOT_PASSWORD}"
-      MARIADB_DATABASE: "${MARIADB_DATABASE}"
-      MARIADB_USER: "${MARIADB_USER}"
-      MARIADB_PASSWORD: "${MARIADB_PASSWORD}"
     deploy:
       placement:
         constraints:
