@@ -1,7 +1,7 @@
 services:
 
   traefik:
-    image: traefik:v3.1
+    image: traefik:v3.2
 
   php:
     depends_on:
@@ -10,7 +10,7 @@ services:
       APACHE_DOCUMENT_ROOT: "/var/www/html/public/"
 
   mariadb:
-    image: mariadb:10.5
+    image: mariadb:11.4
     environment:
       MARIADB_RANDOM_ROOT_PASSWORD: "${MARIADB_ROOT_PASSWORD}"
       MARIADB_DATABASE: "${MARIADB_DATABASE}"

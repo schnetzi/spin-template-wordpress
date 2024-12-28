@@ -45,7 +45,6 @@ services:
       - /var/www/html/public/wp-content/plugins
       - /var/www/html/public/wp-content/themes
       - /var/www/html/public/wp-content/upgrade
-
     deploy:
       replicas: 1
       update_config:
