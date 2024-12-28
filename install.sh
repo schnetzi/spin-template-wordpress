@@ -2,7 +2,7 @@
 set -e # Exit on error
 
 ###############################################
-# Prepare enviornment
+# Prepare environment
 ###############################################
 # Capture input arguments
 wordpress_framework_args=("$@")
@@ -14,10 +14,14 @@ export SPIN_PHP_DOCKER_IMAGE
 
 # Set project files
 declare -a spin_project_files=(
+  "vendor"
+  "composer.lock"
   ".infrastructure"
   "docker-compose*"
   "Dockerfile*"
 )
+
+SERVER_CONTACT=""
 
 ###############################################
 # Configure "SPIN_PROJECT_DIRECTORY" variable
