@@ -54,7 +54,6 @@ You can create your own certificate trust if you'd like too. Just simply replace
 This project is still under development. Things that need to be done are
 
 * [ ] Create github actions for automatic deployments
-* [ ] Test the deploy functionality to run the containers in production
 
 ## Resources
 - **[Website](https://serversideup.net/open-source/spin/)** overview of the product.

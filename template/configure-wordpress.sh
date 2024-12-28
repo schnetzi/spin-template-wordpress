@@ -5,6 +5,19 @@ if [ -f "$project_dir/public/wp-config.php" ]; then
     return 0
 fi
 
+redisConfig=""
+
+if [ -n "$redis" ]; then
+  redisConfig=$(cat <<EOL
+
+/** Redis */
+define('WP_REDIS_HOST', 'redis');
+define('WP_REDIS_PORT', '6379');
+defined('WP_REDIS_PASSWORD') or define('WP_REDIS_PASSWORD', \$_ENV['REDIS_PASSWORD']);
+EOL
+)
+fi
+
 salts=$(curl -s https://api.wordpress.org/secret-key/1.1/salt/)
 
 cat <<EOF >"$project_dir/public/wp-config.php"
@@ -59,11 +72,7 @@ defined('WP_HOME') or define('WP_HOME', \$_ENV['APP_URL']);
 defined('WP_SITEURL') or define('WP_SITEURL', \$_ENV['APP_URL']);
 define( 'FORCE_SSL_ADMIN', true );
 #define( 'WP_MEMORY_LIMIT', '256M' );
-
-/** Redis */
-define('WP_REDIS_HOST', 'redis');
-define('WP_REDIS_PORT', '6379');
-defined('WP_REDIS_PASSWORD') or define('WP_REDIS_PASSWORD', \$_ENV['REDIS_PASSWORD']);
+$redisConfig
 
 /**#@+
  * Authentication unique keys and salts.

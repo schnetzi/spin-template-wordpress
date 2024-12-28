@@ -1,0 +1,16 @@
+services:
+
+  redis:
+    volumes:
+      - redis_data:/data
+    networks:
+      - web-public
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 1
+        delay: 5s
+        order: start-first
+
+volumes:
+  redis_data:

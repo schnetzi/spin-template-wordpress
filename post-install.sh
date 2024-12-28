@@ -6,7 +6,6 @@ SPIN_PHP_VERSION="${SPIN_PHP_VERSION:-8.3}"
 SPIN_PHP_DOCKER_IMAGE="${SPIN_PHP_DOCKER_IMAGE:-serversideup/php:${SPIN_PHP_VERSION}-cli}"
 
 # Set project variables
-spin_template_type="open-source"
 project_dir=${SPIN_PROJECT_DIRECTORY:-"$(pwd)/template"}
 php_dockerfile="Dockerfile"
 docker_compose_database_migration="false"
@@ -14,6 +13,14 @@ docker_compose_database_migration="false"
 # Initialize the service variables
 mariadb="1"
 redis=""
+###############################################
+# Variables
+###############################################
+template_src_dir=${SPIN_TEMPLATE_TEMPORARY_SRC_DIR:-"$(pwd)"}
+template_src_dir_absolute=$(realpath "$template_src_dir")
+
+# Set dependency versions
+yq_version="4.44.2"
 
 ###############################################
 # Functions
@@ -38,14 +45,44 @@ add_php_extensions() {
     echo "Custom PHP extensions added."
 }
 
+initialize_git_repository() {
+    local current_dir=""
+    current_dir=$(pwd)
+
+    cd "$project_dir" || exit
+    echo "Initializing Git repository..."
+    git init
+
+    # Exclude vendor from git
+    line_in_file --file ".gitignore" \
+        "/vendor"
+
+    cd "$current_dir" || exit
+}
+
 process_selections() {
     [[ $mariadb ]] && configure_mariadb
+    [[ $redis ]] && configure_redis
     echo "Services configured."
 }
 
-configure_mariadb() {
-    # TODO
-    echo "Configuring maria db."
+
+select_features() {
+    while true; do
+        clear
+        echo "${BOLD}${YELLOW}Select which features you'd like to use:${RESET}"
+        echo -e "${redis:+$BOLD$BLUE}1) Redis${RESET}"
+        echo "Press a number to select/deselect."
+        echo "Press ${BOLD}${BLUE}ENTER${RESET} to continue or skip."
+
+        read -s -r -n 1 key
+        case $key in
+        1)
+            [[ $redis ]] && redis="" || redis="1"
+            ;;
+        '') break ;;
+        esac
+    done
 }
 
 select_php_extensions() {
@@ -128,12 +165,6 @@ set_colors() {
     fi
 }
 
-prepare_wordpress_env() {
-    echo "Preparing WordPress environments..."
-    (cd $project_dir && spin run php composer require vlucas/phpdotenv)
-    echo "Done preparing WordPress environments."
-}
-
 configure_wordpress() {
     echo "Configuring WordPress..."
     source "$project_dir/configure-wordpress.sh"
@@ -142,11 +173,82 @@ configure_wordpress() {
 }
 
 ###############################################
+# Functions
+###############################################
+configure_mariadb() {
+    # TODO
+    echo "Configuring maria db... Done."
+}
+
+configure_redis() {
+    local service_name="redis"
+
+    merge_blocks "$service_name"
+
+    echo "$service_name: Updating the .env and .env.example files..."
+    line_in_file --action replace --file "$project_dir/.env" --file "$project_dir/.env.example" "REDIS_PASSWORD" "REDIS_PASSWORD=redispassword"
+}
+
+merge_blocks() {
+    local service_name=$1
+    local blocks_dir="$template_src_dir_absolute/blocks/$service_name"
+
+    if [[ ! -d $blocks_dir ]]; then
+        echo "${BOLD}${RED}The blocks directory for \"$service_name\" does not exist. Exiting...${RESET}"
+        echo "Could not find the blocks directory at:"
+        echo "$blocks_dir"
+        exit 1
+    fi
+
+    echo "${BLUE}Updating files for $service_name...${RESET}"
+
+    find "$blocks_dir" -type f | while read -r block; do
+        # Extract the relative path of the file within the blocks directory
+        local rel_path=${block#"$blocks_dir/"}
+
+        # Determine the destination file
+        local destination="${project_dir}/${rel_path}"
+
+        # Create the destination directory if it doesn't exist
+        mkdir -p "$(dirname "$destination")"
+
+        # Check if the file is a YAML file
+        if [[ "$block" =~ \.(yml|yaml)$ ]]; then
+            # If the destination file doesn't exist, create it
+            if [[ ! -f "$destination" ]]; then
+                echo "{}" >"$destination"
+            fi
+
+            # Get relative paths for Docker volume mounts
+            local rel_block="${block#"${template_src_dir_absolute}/"}"
+            local rel_destination="${destination#"${project_dir}/"}"
+
+            # Merge the block into the destination file, appending values
+            docker run --rm \
+                --user "${SPIN_USER_ID}:${SPIN_GROUP_ID}" \
+                -v "${template_src_dir_absolute}:/src_dir" \
+                -v "${project_dir}:/dest_dir" \
+                "mikefarah/yq:$yq_version" eval-all \
+                'select(fileIndex == 0) * select(fileIndex == 1)' \
+                "/dest_dir/$rel_destination" "/src_dir/$rel_block" \
+                -i
+
+            echo "$service_name: Updated ${rel_path}"
+        else
+            # For non-YAML files, simply copy the file
+            cp "$block" "$destination"
+            echo "$service_name: Copied ${rel_path}"
+        fi
+    done
+}
+
+###############################################
 # Main
 ###############################################
 
 set_colors
 select_php_extensions
+select_features
 
 # Clean up the screen before moving forward
 clear
@@ -154,32 +256,40 @@ clear
 # Set PHP Version of Project
 line_in_file --action replace --file "$project_dir/$php_dockerfile" "FROM serversideup" "FROM serversideup/php:${SPIN_PHP_VERSION}-fpm-apache AS base"
 
+# Add environment variables
+cp "$project_dir/.env.example" "$project_dir/.env"
+
 # Add PHP Extensions if available
 if [ ${#php_extensions[@]} -gt 0 ]; then
     add_php_extensions
+fi
+
+# Install Composer dependencies
+if [[ "$SPIN_INSTALL_DEPENDENCIES" == "true" ]]; then
+    docker pull "$SPIN_PHP_DOCKER_IMAGE"
+
+    if [[ "$SPIN_ACTION" == "init" ]]; then
+        echo "Re-installing composer dependencies..."
+        (cd $project_dir && spin run php composer install)
+    else
+        echo "Installing Dependencies..."
+        (cd $project_dir && spin run php composer require vlucas/phpdotenv)
+        (cd $project_dir && spin run php composer require serversideup/spin --dev)
+    fi
 fi
 
 # Process the user selections
 process_selections
 
 # Configure APP_URL
-cp "$project_dir/.env.example" "$project_dir/.env"
-prepare_wordpress_env
 configure_wordpress
 
-# Configure Let's Encrypt
-prompt_and_update_file \
-    --title "🔐 Configure Let's Encrypt" \
-    --details "Let's Encrypt requires an email address to send notifications about SSL renewals." \
-    --prompt "Please enter your email" \
-    --file "$project_dir/.infrastructure/conf/traefik/prod/traefik.yml" \
-    --search-default "changeme@example.com" \
-    --success-msg "Updated \".infrastructure/conf/traefik/prod/traefik.yml\" with your email."
+# Configure Server Contact
+line_in_file --action exact --ignore-missing --file "$project_dir/.infrastructure/conf/traefik/prod/traefik.yml" "changeme@example.com" "$SERVER_CONTACT"
+line_in_file --action exact --ignore-missing --file "$project_dir/.spin.yml" "changeme@example.com" "$SERVER_CONTACT"
 
-if [[ "$SPIN_INSTALL_DEPENDENCIES" == "true" ]]; then
-    if [[ "$docker_compose_database_migration" == "true" ]]; then
-        initialize_database_service
-    fi
+if [[ ! -d "$project_dir/.git" ]]; then
+    initialize_git_repository
 fi
 
 # Export actions so it's available to the main Spin script

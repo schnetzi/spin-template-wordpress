@@ -1,0 +1,7 @@
+services:
+
+  redis:
+    volumes:
+      - ./.infrastructure/volume_data/redis/data:/data
+    networks:
+      - development

@@ -219,6 +219,14 @@ init() {
 ###############################################
 
 prompt_php_version
+SERVER_CONTACT=$(prompt_and_update_file \
+    --title "🤖 Server Contact" \
+    --details "Set an email contact who should be notified for Let's Encrypt SSL renewals and other system alerts." \
+    --prompt "Please enter your email" \
+    --output-only \
+    --validate "email")
+
+export SERVER_CONTACT
 
 # When spin calls this script, it already sets a variable
 # called $SPIN_ACTION (that will have a value of "new" or "init")
