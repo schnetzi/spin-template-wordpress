@@ -55,7 +55,9 @@ initialize_git_repository() {
 
     # Exclude vendor from git
     line_in_file --file ".gitignore" \
-        "/vendor"
+        "/vendor" \
+        ".env*" \
+        "!.env.example"
 
     cd "$current_dir" || exit
 }
