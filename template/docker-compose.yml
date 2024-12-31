@@ -12,7 +12,8 @@ services:
   mariadb:
     image: mariadb:11.4
     environment:
-      MARIADB_RANDOM_ROOT_PASSWORD: "${MARIADB_ROOT_PASSWORD}"
+      # Non empty value to generate a random root password
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
       MARIADB_DATABASE: "${MARIADB_DATABASE}"
       MARIADB_USER: "${MARIADB_USER}"
       MARIADB_PASSWORD: "${MARIADB_PASSWORD}"
