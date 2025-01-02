@@ -15,14 +15,14 @@ FROM serversideup/php:8.3-fpm-apache AS base
 ############################################
 FROM base AS development
 
-# Switch to root so we can set the user ID and group ID
-USER root
-
 # We can pass USER_ID and GROUP_ID as build arguments
 # to ensure the www-data user has the same UID and GID
 # as the user running Docker.
 ARG USER_ID
 ARG GROUP_ID
+
+# Switch to root so we can set the user ID and group ID
+USER root
 
 # Install wp-cli
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
@@ -42,7 +42,7 @@ USER www-data
 
 # Since we're calling "base", production isn't
 # calling any of that permission stuff
-FROM base AS production
+FROM base AS deploy
 
 # Copy our app files as www-data (33:33)
 COPY --chown=www-data:www-data . /var/www/html
