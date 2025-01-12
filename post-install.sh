@@ -171,6 +171,20 @@ configure_wordpress() {
     echo "Configuring WordPress..."
     source "$project_dir/configure-wordpress.sh"
     rm "$project_dir/configure-wordpress.sh"
+
+    local current_dir=""
+    current_dir=$(pwd)
+
+    cd "$project_dir" || exit
+
+    line_in_file --file ".dockerignore" \
+        "public/wp-content/" \
+        "!public/wp-content/languages" \
+        "!public/wp-content/plugins" \
+        "!public/wp-content/themes"
+
+    cd "$current_dir" || exit
+
     echo "Done configuring WordPress."
 }
 
