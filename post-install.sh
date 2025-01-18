@@ -68,7 +68,6 @@ process_selections() {
     echo "Services configured."
 }
 
-
 select_features() {
     while true; do
         clear
@@ -171,6 +170,7 @@ configure_wordpress() {
     echo "Configuring WordPress..."
     source "$project_dir/configure-wordpress.sh"
     rm "$project_dir/configure-wordpress.sh"
+    mv "$project_dir/load-environment.php" "$project_dir/public/load-environment.php"
 
     local current_dir=""
     current_dir=$(pwd)

@@ -24,10 +24,7 @@ cat <<EOF >"$project_dir/public/wp-config.php"
 <?php
 /** @desc this loads the composer autoload file */
 require_once dirname( __DIR__ ) . '/vendor/autoload.php';
-
-/** @desc this instantiates Dotenv and passes in our path to .env */
-\$dotenv = Dotenv\Dotenv::createImmutable(dirname(__DIR__));
-\$dotenv->safeLoad();
+require_once dirname( __DIR__ ) . '/public/load-environment.php';
 
 /**
  * The base configuration for WordPress
