@@ -7,9 +7,12 @@ $appEnv = getenv('APP_ENV') ?? null;
 $envFile = '.env';
 
 if ($appEnv) {
-    $envFile = '.env.' . $appEnv;
+    $possibleEnvFile = '.env.' . $appEnv;
+
+    if (file_exists(dirname(__DIR__) . '/' . $possibleEnvFile)) {
+        $envFile = $possibleEnvFile;
+    }
 }
 
-// Load the environment specific file and override current values
 $dotenv = Dotenv::createMutable(dirname(__DIR__), $envFile);
 $dotenv->safeLoad();
