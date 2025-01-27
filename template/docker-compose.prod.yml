@@ -32,7 +32,6 @@ services:
     image: ${SPIN_IMAGE_DOCKERFILE} # 👈 Change this if you're not using `spin deploy`
     environment:
       APACHE_DOCUMENT_ROOT: "/var/www/html/public/"
-      PHP_POOL_NAME: "${CI_PROJECT_NAME}-${CI_ENVIRONMENT_SLUG}"
       PHP_OPCACHE_ENABLE: "1"
       APP_ENV: "${SPIN_DEPLOYMENT_ENVIRONMENT}" # 👈 Remove this if you're not using `spin deploy`
     networks:
