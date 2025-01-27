@@ -8,19 +8,12 @@ SPIN_PHP_DOCKER_IMAGE="${SPIN_PHP_DOCKER_IMAGE:-serversideup/php:${SPIN_PHP_VERS
 # Set project variables
 project_dir=${SPIN_PROJECT_DIRECTORY:-"$(pwd)/template"}
 php_dockerfile="Dockerfile"
-docker_compose_database_migration="false"
+template_src_dir=${SPIN_TEMPLATE_TEMPORARY_SRC_DIR:-"$(pwd)"}
+template_src_dir_absolute=$(realpath "$template_src_dir")
 
 # Initialize the service variables
 mariadb="1"
 redis=""
-###############################################
-# Variables
-###############################################
-template_src_dir=${SPIN_TEMPLATE_TEMPORARY_SRC_DIR:-"$(pwd)"}
-template_src_dir_absolute=$(realpath "$template_src_dir")
-
-# Set dependency versions
-yq_version="4.44.2"
 
 ###############################################
 # Functions
@@ -205,6 +198,16 @@ configure_redis() {
     line_in_file --action replace --file "$project_dir/.env" --file "$project_dir/.env.example" "REDIS_PASSWORD" "REDIS_PASSWORD=redispassword"
 }
 
+docker_yq() {
+    local yq_version="4.44.2"
+    docker run --rm \
+        --user "${SPIN_USER_ID}:${SPIN_GROUP_ID}" \
+        -v "${project_dir}:/workdir" \
+        -v "${template_src_dir_absolute}:/src" \
+        "mikefarah/yq:$yq_version" \
+        "$@"
+}
+
 merge_blocks() {
     local service_name=$1
     local blocks_dir="$template_src_dir_absolute/blocks/$service_name"
@@ -240,13 +243,9 @@ merge_blocks() {
             local rel_destination="${destination#"${project_dir}/"}"
 
             # Merge the block into the destination file, appending values
-            docker run --rm \
-                --user "${SPIN_USER_ID}:${SPIN_GROUP_ID}" \
-                -v "${template_src_dir_absolute}:/src_dir" \
-                -v "${project_dir}:/dest_dir" \
-                "mikefarah/yq:$yq_version" eval-all \
+            docker_yq eval-all \
                 'select(fileIndex == 0) * select(fileIndex == 1)' \
-                "/dest_dir/$rel_destination" "/src_dir/$rel_block" \
+                "/workdir/$rel_destination" "/src/$rel_block" \
                 -i
 
             echo "$service_name: Updated ${rel_path}"
