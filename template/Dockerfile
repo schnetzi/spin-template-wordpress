@@ -37,6 +37,21 @@ RUN docker-php-serversideup-set-id www-data $USER_ID:$GROUP_ID  && \
 USER www-data
 
 ############################################
+# CI image
+############################################
+FROM base AS ci
+
+# Sometimes CI images need to run as root
+# so we set the ROOT user and configure
+# the PHP-FPM pool to run as www-data
+USER root
+
+# Update the Apache user and group settings
+RUN echo "" >> /etc/apache2/envvars && \
+    echo "export APACHE_RUN_USER=www-data" >> /etc/apache2/envvars && \
+    echo "export APACHE_RUN_GROUP=www-data" >> /etc/apache2/envvars
+
+############################################
 # Production Image
 ############################################
 

@@ -1,0 +1,15 @@
+services:
+  php:
+    build:
+      target: ci
+      dockerfile: Dockerfile
+    volumes:
+      - .:/var/www/html/
+    depends_on:
+      - mariadb
+  mariadb:
+    environment:
+      MARIADB_ROOT_PASSWORD: "ci_rootpassword"
+      MARIADB_DATABASE: "ci_database"
+      MARIADB_USER: "ci_user"
+      MARIADB_PASSWORD: "ci_password"
