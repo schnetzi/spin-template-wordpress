@@ -1,0 +1,53 @@
+###########################################################################
+# 🚨 WARNING: You must set secrets in GitHub Actions in order for this
+# workflow to work. You must set the following secrets:
+# - AUTHORIZED_KEYS
+# - PRODUCTION_ENV_FILE_BASE64
+# - PRODUCTION_SSH_REMOTE_HOSTNAME
+# - SSH_DEPLOY_PRIVATE_KEY
+# - SSH_REMOTE_KNOWN_HOSTS
+# more info at the github action documentation:
+#   https://github.com/serversideup/github-action-docker-swarm-deploy
+###########################################################################
+name: Production Deployment
+
+on:
+  release:
+    types:
+      - released
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/service_docker-build-and-publish.yml
+    with:
+      docker-tags: "ghcr.io/${{ github.repository }}:${{ github.sha }}"
+      environment: production
+    secrets: inherit
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Set project name
+        run: |
+          echo "PROJECT_NAME=${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
+      - uses: serversideup/github-action-docker-swarm-deploy@v3
+        with:
+          env_file_base64: "${{ secrets.PRODUCTION_ENV_FILE_BASE64 }}"
+          md5_file_path: "./.infrastructure/conf/traefik/prod/traefik.yml"
+          md5_variable_name: "SPIN_MD5_HASH_TRAEFIK_YML"
+          registry: "ghcr.io"
+          registry-token: "${{ secrets.GITHUB_TOKEN }}"
+          registry-username: "${{ github.actor }}"
+          ssh_deploy_private_key: "${{ secrets.SSH_DEPLOY_PRIVATE_KEY }}"
+          ssh_deploy_user: "deploy"
+          ssh_remote_hostname: "${{ secrets.PRODUCTION_SSH_REMOTE_HOSTNAME }}"
+          ssh_remote_known_hosts: "${{ secrets.SSH_REMOTE_KNOWN_HOSTS }}"
+          stack_name: "${{ env.PROJECT_NAME }}"
+        env:
+          SPIN_IMAGE_DOCKERFILE: "ghcr.io/${{ github.repository }}:${{ github.sha }}"
+          SPIN_DEPLOYMENT_ENVIRONMENT: production
+          AUTHORIZED_KEYS: "${{ secrets.AUTHORIZED_KEYS }}"

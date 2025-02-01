@@ -14,6 +14,7 @@ template_src_dir_absolute=$(realpath "$template_src_dir")
 # Initialize the service variables
 mariadb="1"
 redis=""
+use_github_actions=""
 
 ###############################################
 # Functions
@@ -58,6 +59,7 @@ initialize_git_repository() {
 process_selections() {
     [[ $mariadb ]] && configure_mariadb
     [[ $redis ]] && configure_redis
+    [[ $use_github_actions ]] && configure_github_actions
     echo "Services configured."
 }
 
@@ -75,6 +77,29 @@ select_features() {
             [[ $redis ]] && redis="" || redis="1"
             ;;
         '') break ;;
+        esac
+    done
+}
+
+select_github_actions() {
+    while true; do
+        clear
+        echo "${BOLD}${YELLOW}Would you like to use GitHub Actions?${RESET}"
+        if [ "$use_github_actions" = "1" ]; then
+            echo -e "${BOLD}${BLUE}1) Yes${RESET}"
+            echo "2) No"
+        else
+            echo "1) Yes"
+            echo -e "${BOLD}${BLUE}2) No${RESET}"
+        fi
+        echo "Press a number to select/deselect."
+        echo "Press ${BOLD}${BLUE}ENTER${RESET} to continue."
+
+        read -s -n 1 key
+        case $key in
+            1) use_github_actions="1";;
+            2) use_github_actions="" ;;
+            '') break ;;
         esac
     done
 }
@@ -184,6 +209,11 @@ configure_wordpress() {
 ###############################################
 # Functions
 ###############################################
+configure_github_actions() {
+    local service_name="github-actions"
+    merge_blocks "$service_name"
+}
+
 configure_mariadb() {
     # TODO
     echo "Configuring maria db... Done."
@@ -264,6 +294,7 @@ merge_blocks() {
 set_colors
 select_php_extensions
 select_features
+select_github_actions
 
 # Clean up the screen before moving forward
 clear
