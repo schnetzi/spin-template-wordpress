@@ -37,6 +37,16 @@ We provide certificates by default. If you'd like to trust these certificates, y
 
 You can create your own certificate trust if you'd like too. Just simply replace our certificates with your own.
 
+### Prune old resouces
+
+You need to periodically prune old resources on your server. To do so you can run
+
+```sh
+sudo docker system prune -a --volumes
+```
+
+To automate it you can run a cron-job for example that does this.
+
 ## Project status
 
 This project is ready to use. Please open an issue if you find any problems.
