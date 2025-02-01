@@ -3,6 +3,9 @@ This is a template for WordPress for Spin. It should help make spinning up new W
 
 - Different versions of PHP selectable (8.4, 8.3, 8.2)
 - MariaDb
+- Redis for improved WP performance
+- Github Actions for automatic deployments
+- Spin features for provision and deploy in minutes
 
 ## Default configuration
 To use this template, you must have [Spin](https://serversideup.net/open-source/spin/docs) installed.
@@ -23,21 +26,6 @@ spin new schnetzi/spin-template-wordpress my-wordpress-app
 To be able to access the wordpress site locally you need to add the test-domain to your hosts file.
 It is explained in detail in the [serversideup documentation](https://getspin.pro/docs/guide/configuring-your-hosts-file)
 
-### Set your email contact for Let's Encrypt certificates
-Let's encrypt requires an email address to issue certificates. You can set this in the Traefik configuration for production.
-
-```yml
-# File to update:
-# .infrastructure/conf/traefik/prod/traefik.yml
-
-certificatesResolvers:
-  letsencryptresolver:
-    acme:
-      email: "changeme@example.com"
-```
-
-Change `changeme@example.com` to a valid email address. This email address will be used by Let's Encrypt to send you notifications about your certificates.
-
 ## 👨‍🔬 Advanced configuration
 If you'd like to further customize your experience, here are some helpful tips:
 
@@ -51,9 +39,7 @@ You can create your own certificate trust if you'd like too. Just simply replace
 
 ## Project status
 
-This project is still under development. Things that need to be done are
-
-* [ ] Create github actions for automatic deployments
+This project is ready to use. Please open an issue if you find any problems.
 
 ## Resources
 - **[Website](https://serversideup.net/open-source/spin/)** overview of the product.
