@@ -68,7 +68,10 @@ define( 'DB_COLLATE', '' );
 defined('WP_HOME') or define('WP_HOME', \$_ENV['APP_URL']);
 defined('WP_SITEURL') or define('WP_SITEURL', \$_ENV['APP_URL']);
 define( 'FORCE_SSL_ADMIN', true );
-#define( 'WP_MEMORY_LIMIT', '256M' );
+// define( 'WP_MEMORY_LIMIT', '256M' );
+
+// Disallow file modifications
+define('DISALLOW_FILE_MODS', true);
 $redisConfig
 
 /**#@+
