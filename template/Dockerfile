@@ -8,7 +8,7 @@ FROM serversideup/php:8.3-fpm-apache AS base
 
 ## Uncomment if you need to install additional PHP extensions
 # USER root
-# RUN install-php-extensions bcmath gd
+# RUN install-php-extensions gd imagick
 
 ############################################
 # Development Image
