@@ -51,7 +51,8 @@ initialize_git_repository() {
     line_in_file --file ".gitignore" \
         "/vendor" \
         ".env*" \
-        "!.env.example"
+        "!.env.example" \
+        "public/wp-content/uploads/*"
 
     cd "$current_dir" || exit
 }
