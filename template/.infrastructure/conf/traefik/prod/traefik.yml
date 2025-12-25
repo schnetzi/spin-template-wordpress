@@ -52,6 +52,7 @@ entryPoints:
       trustedIPs: *trustedIPs
 
 accessLog: {}
+ping: {}
 log:
   level: ERROR
 

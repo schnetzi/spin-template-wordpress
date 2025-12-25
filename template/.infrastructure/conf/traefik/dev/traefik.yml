@@ -20,6 +20,7 @@ entryPoints:
     address: ":443"
 
 accessLog: {}
+ping: {}
 log:
   level: ERROR
 

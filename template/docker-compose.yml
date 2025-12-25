@@ -1,7 +1,13 @@
 services:
 
   traefik:
-    image: traefik:v3.5
+    image: traefik:v3.6
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   php:
     depends_on:
