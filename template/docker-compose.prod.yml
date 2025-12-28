@@ -37,13 +37,7 @@ services:
     networks:
       - web-public
     volumes:
-      # Map the entire wp-content folder, excluding specific subdirectories
-      - wp-content:/var/www/html/public/wp-content
-      # Use the container's versions for specific subdirectories
-      - /var/www/html/public/wp-content/languages
-      - /var/www/html/public/wp-content/plugins
-      - /var/www/html/public/wp-content/themes
-      - /var/www/html/public/wp-content/upgrade
+      - wp-uploads:/var/www/html/public/wp-content/uploads
     deploy:
       replicas: 1
       update_config:
@@ -95,7 +89,7 @@ volumes:
   mariadb_data:
   mariadb_custom_conf:
   mariadb_shared:
-  wp-content:
+  wp-uploads:
 
 networks:
   web-public:
