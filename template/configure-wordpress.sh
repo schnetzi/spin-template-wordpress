@@ -86,7 +86,14 @@ $redisConfig
  * @since 2.6.0
  */
 
-$salts
+define('AUTH_KEY', \$_ENV['AUTH_KEY']);
+define('SECURE_AUTH_KEY', \$_ENV['SECURE_AUTH_KEY']);
+define('LOGGED_IN_KEY', \$_ENV['LOGGED_IN_KEY']);
+define('NONCE_KEY', \$_ENV['NONCE_KEY']);
+define('AUTH_SALT', \$_ENV['AUTH_SALT']);
+define('SECURE_AUTH_SALT', \$_ENV['SECURE_AUTH_SALT']);
+define('LOGGED_IN_SALT', \$_ENV['LOGGED_IN_SALT']);
+define('NONCE_SALT', \$_ENV['NONCE_SALT']);
 
 /**
  * WordPress database table prefix.
