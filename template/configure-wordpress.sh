@@ -71,7 +71,11 @@ define( 'FORCE_SSL_ADMIN', true );
 // define( 'WP_MEMORY_LIMIT', '256M' );
 
 // Disallow file modifications
-define('DISALLOW_FILE_MODS', true);
+defined('DISALLOW_FILE_MODS') or define(
+    'DISALLOW_FILE_MODS',
+    filter_var(\$_ENV['DISALLOW_FILE_MODS'] ?? false, FILTER_VALIDATE_BOOLEAN)
+);
+
 $redisConfig
 
 /**#@+
