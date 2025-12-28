@@ -47,13 +47,13 @@ require_once dirname( __DIR__ ) . '/public/load-environment.php';
 
 // ** Database settings - You can get this info from your web host ** //
 /** The name of the database for WordPress */
-defined('DB_NAME') or define('DB_NAME', \$_ENV['MARIADB_DATABASE']);
+defined('DB_NAME') or define('DB_NAME', \$_ENV['DATABASE_NAME']);
 
 /** Database username */
-defined('DB_USER') or define('DB_USER', \$_ENV['MARIADB_USER']);
+defined('DB_USER') or define('DB_USER', \$_ENV['DATABASE_USER']);
 
 /** Database password */
-defined('DB_PASSWORD') or define('DB_PASSWORD', \$_ENV['MARIADB_PASSWORD']);
+defined('DB_PASSWORD') or define('DB_PASSWORD', \$_ENV['DATABASE_PASSWORD']);
 
 /** Database hostname */
 define( 'DB_HOST', 'mariadb' );
