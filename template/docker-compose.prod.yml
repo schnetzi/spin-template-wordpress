@@ -61,17 +61,17 @@ services:
         window: 120s
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.my-php-app.rule=Host(`${SPIN_APP_DOMAIN}`)"
-        - "traefik.http.routers.my-php-app.entrypoints=websecure"
-        - "traefik.http.routers.my-php-app.tls=true"
-        - "traefik.http.routers.my-php-app.tls.certresolver=letsencryptresolver"
-        - "traefik.http.services.my-php-app.loadbalancer.server.port=8080"
-        - "traefik.http.services.my-php-app.loadbalancer.server.scheme=http"
+        - "traefik.http.routers.wordpress.rule=Host(`${SPIN_APP_DOMAIN}`)"
+        - "traefik.http.routers.wordpress.entrypoints=websecure"
+        - "traefik.http.routers.wordpress.tls=true"
+        - "traefik.http.routers.wordpress.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.wordpress.loadbalancer.server.port=8443"
+        - "traefik.http.services.wordpress.loadbalancer.server.scheme=https"
         # Health check
-        - "traefik.http.services.my-php-app.loadbalancer.healthcheck.path=/healthcheck"
-        - "traefik.http.services.my-php-app.loadbalancer.healthcheck.interval=30s"
-        - "traefik.http.services.my-php-app.loadbalancer.healthcheck.timeout=5s"
-        - "traefik.http.services.my-php-app.loadbalancer.healthcheck.scheme=http"
+        - "traefik.http.services.wordpress.loadbalancer.healthcheck.path=/healthcheck"
+        - "traefik.http.services.wordpress.loadbalancer.healthcheck.interval=30s"
+        - "traefik.http.services.wordpress.loadbalancer.healthcheck.timeout=5s"
+        - "traefik.http.services.wordpress.loadbalancer.healthcheck.scheme=https"
 
   mariadb:
     networks:

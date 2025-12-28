@@ -3,16 +3,17 @@ services:
   traefik:
     image: traefik:v3.6
     healthcheck:
-      test: ["CMD", "traefik", "healthcheck"]
+      test: [ "CMD", "traefik", "healthcheck", "--ping" ]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 5s
+      retries: 3
+      start_period: 10s
 
   php:
     depends_on:
       - traefik
     environment:
+      SSL_MODE: "full"
       APACHE_DOCUMENT_ROOT: "/var/www/html/public/"
 
   mariadb:
