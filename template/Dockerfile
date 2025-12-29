@@ -4,7 +4,7 @@
 
 # Learn more about the Server Side Up PHP Docker Images at:
 # https://serversideup.net/open-source/docker-php/
-FROM serversideup/php:8.3-fpm-apache AS base
+FROM serversideup/php:8.4-fpm-apache AS base
 
 USER root
 RUN a2enmod remoteip headers

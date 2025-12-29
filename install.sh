@@ -8,7 +8,7 @@ set -e # Exit on error
 wordpress_framework_args=("$@")
 
 # Default PHP Docker Image
-SPIN_PHP_VERSION="${SPIN_PHP_VERSION:-8.3}"
+SPIN_PHP_VERSION="${SPIN_PHP_VERSION:-8.4}"
 SPIN_PHP_DOCKER_IMAGE="${SPIN_PHP_DOCKER_IMAGE:-serversideup/php:${SPIN_PHP_VERSION}-cli}"
 export SPIN_PHP_DOCKER_IMAGE
 

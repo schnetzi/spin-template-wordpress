@@ -2,7 +2,7 @@
 
 # Capture Spin Variables
 SPIN_ACTION=${SPIN_ACTION:-"install"}
-SPIN_PHP_VERSION="${SPIN_PHP_VERSION:-8.3}"
+SPIN_PHP_VERSION="${SPIN_PHP_VERSION:-8.4}"
 SPIN_PHP_DOCKER_IMAGE="${SPIN_PHP_DOCKER_IMAGE:-serversideup/php:${SPIN_PHP_VERSION}-cli}"
 
 # Set project variables
