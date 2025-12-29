@@ -3,19 +3,20 @@ on:
     inputs:
       platforms:
         type: string
-        default: "linux/amd64"
+        default: 'linux/amd64'
       docker-tags:
         required: true
         type: string
       dockerfile:
         type: string
-        default: "./Dockerfile"
+        default: './Dockerfile'
       target:
         type: string
-        default: ""
+        default: ''
       environment:
         type: string
         required: true
+
 env:
   DOCKER_COMPOSE_CMD: docker compose -f docker-compose.yml -f docker-compose.ci.yml
 jobs:
@@ -24,13 +25,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Decode and set .env file
-        run: |
-          echo $ENV_FILE_BASE64 | base64 -d > .env
-          chmod 600 .env
-        env:
-          ENV_FILE_BASE64: ${{ secrets.PRODUCTION_ENV_FILE_BASE64 }}
 
       - name: Restore composer cache (if available)
         id: composer-vendor-restore
@@ -69,12 +63,25 @@ jobs:
         env:
           ENVIRONMENT: ${{ inputs.environment }}
 
+      - name: Validate and set environment file
+        run: |
+          SECRET_NAME="${{ steps.env-name.outputs.upper_env }}_ENV_FILE_BASE64"
+          if [ -z "$ENV_FILE_BASE64" ]; then
+            echo "::error::Required secret '$SECRET_NAME' is not set. Please add this secret to your repository. If you previously used 'ENV_FILE_BASE64', be sure to rename it to '$SECRET_NAME'."
+            exit 1
+          fi
+
+          echo $ENV_FILE_BASE64 | base64 -d > .env
+          chmod 600 .env
+        env:
+          ENV_FILE_BASE64: ${{ secrets[format('{0}_ENV_FILE_BASE64', steps.env-name.outputs.upper_env)] }}
+
       - name: docker-build-action
-        uses: serversideup/github-action-docker-build@v5
+        uses: serversideup/github-action-docker-build@v6
         with:
           tags: "${{ inputs.docker-tags }}"
           dockerfile: "${{ inputs.dockerfile }}"
           registry: "ghcr.io"
           registry-username: "${{ github.actor }}"
-          registry-token: "${{ secrets.GITHUB_TOKEN }}"
+          registry-password: "${{ secrets.GITHUB_TOKEN }}"
           platforms: "${{ inputs.platforms }}"
