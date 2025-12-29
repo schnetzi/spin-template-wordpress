@@ -6,6 +6,11 @@
 # https://serversideup.net/open-source/docker-php/
 FROM serversideup/php:8.3-fpm-apache AS base
 
+USER root
+RUN a2enmod remoteip headers
+COPY ./.infrastructure/conf/apache/remoteip.conf /etc/apache2/conf-available/remoteip.conf
+RUN a2enconf remoteip
+
 ## Uncomment if you need to install additional PHP extensions
 # USER root
 # RUN install-php-extensions gd imagick
