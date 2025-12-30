@@ -1,0 +1,11 @@
+services:
+  mariadb:
+    environment:
+      MARIADB_ROOT_PASSWORD: "cirootpassword"
+      MARIADB_DATABASE: "cidatabase"
+      MARIADB_USER: "ciuser"
+      MARIADB_PASSWORD: "cipassword"
+
+  php:
+    depends_on:
+      - mariadb

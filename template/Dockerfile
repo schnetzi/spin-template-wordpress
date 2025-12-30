@@ -7,12 +7,9 @@
 FROM serversideup/php:8.4-fpm-apache AS base
 
 USER root
-RUN a2enmod remoteip headers
-COPY ./.infrastructure/conf/apache/remoteip.conf /etc/apache2/conf-available/remoteip.conf
-RUN a2enconf remoteip
+# SPIN_APACHE_REMOTEIP_BLOCK
 
 ## Uncomment if you need to install additional PHP extensions
-# USER root
 # RUN install-php-extensions gd imagick
 
 ############################################
@@ -36,7 +33,7 @@ RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli
 
 # Set the user ID and group ID for www-data
 RUN docker-php-serversideup-set-id www-data $USER_ID:$GROUP_ID  && \
-    docker-php-serversideup-set-file-permissions --owner $USER_ID:$GROUP_ID --service apache
+    docker-php-serversideup-set-file-permissions --owner $USER_ID:$GROUP_ID
 
 # Drop back to our unprivileged user
 USER www-data

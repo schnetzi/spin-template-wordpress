@@ -2,8 +2,10 @@
 
 # Capture Spin Variables
 SPIN_ACTION=${SPIN_ACTION:-"install"}
-SPIN_PHP_VERSION="${SPIN_PHP_VERSION:-8.4}"
-SPIN_PHP_DOCKER_IMAGE="${SPIN_PHP_DOCKER_IMAGE:-serversideup/php:${SPIN_PHP_VERSION}-cli}"
+SPIN_PHP_VERSION="${SPIN_PHP_VERSION:-8.5}"
+SPIN_PHP_VARIATION="${SPIN_PHP_VARIATION:-fpm-apache}"
+SPIN_PHP_DOCKER_INSTALLER_IMAGE="${SPIN_PHP_DOCKER_INSTALLER_IMAGE:-serversideup/php:${SPIN_PHP_VERSION}-cli}"
+SPIN_PHP_DOCKER_BASE_IMAGE="${SPIN_PHP_DOCKER_BASE_IMAGE:-serversideup/php:${SPIN_PHP_VERSION}-${SPIN_PHP_VARIATION}}"
 
 # Set project variables
 project_dir=${SPIN_PROJECT_DIRECTORY:-"$(pwd)/template"}
@@ -13,12 +15,49 @@ template_src_dir_absolute=$(realpath "$template_src_dir")
 
 # Initialize the service variables
 mariadb="1"
+mysql=""
 redis=""
 use_github_actions=""
+
+# Default WordPress Extensions
+php_extensions=("gd" "exif" "intl" "imagick")
 
 ###############################################
 # Functions
 ###############################################
+
+set_colors() {
+    if [[ -t 1 ]]; then
+        RED=$(printf '\033[31m')
+        GREEN=$(printf '\033[32m')
+        YELLOW=$(printf '\033[33m')
+        BLUE=$(printf '\033[34m')
+        DIM=$(printf '\033[2m')
+        BOLD=$(printf '\033[1m')
+        RESET=$(printf '\033[m')
+    else
+        RED="" GREEN="" YELLOW="" BLUE="" DIM="" BOLD="" RESET=""
+    fi
+}
+
+array_contains() {
+    local needle="$1"; shift
+    local item
+    for item in "$@"; do
+        [[ "$item" == "$needle" ]] && return 0
+    done
+    return 1
+}
+
+ensure_frankenphp_mysql_extensions() {
+    if [[ "$SPIN_PHP_VARIATION" == *"frankenphp"* ]]; then
+        echo "${BLUE}FrankenPHP variation detected — ensuring MySQL PHP extensions are installed (mysqli, pdo_mysql)...${RESET}"
+
+        array_contains "mysqli" "${php_extensions[@]}" || php_extensions+=("mysqli")
+        array_contains "pdo_mysql" "${php_extensions[@]}" || php_extensions+=("pdo_mysql")
+    fi
+}
+
 add_php_extensions() {
     echo "${BLUE}Adding custom PHP extensions...${RESET}"
     local dockerfile="$project_dir/$php_dockerfile"
@@ -29,14 +68,37 @@ add_php_extensions() {
         return 1
     fi
 
-    # Uncomment the USER root line
-    line_in_file --action replace --file "$dockerfile" "# USER root" "USER root"
-
     # Add RUN command to install extensions
     local extensions_string="${php_extensions[*]}"
     line_in_file --action replace --file "$dockerfile" "# RUN install-php-extensions" "RUN install-php-extensions $extensions_string"
 
-    echo "Custom PHP extensions added."
+    echo "Custom PHP extensions added: $extensions_string"
+}
+
+add_apache_remoteip_config() {
+    # Only apply to Apache-based variations
+    if [[ "$SPIN_PHP_VARIATION" != *"apache"* ]]; then
+        return 0
+    fi
+
+    echo "${BLUE}Apache variation detected — enabling RemoteIP module...${RESET}"
+
+    local dockerfile="$project_dir/$php_dockerfile"
+
+    if [ ! -f "$dockerfile" ]; then
+        echo "Error: $dockerfile not found."
+        return 1
+    fi
+
+    awk '
+      $0 ~ /^# SPIN_APACHE_REMOTEIP_BLOCK$/ {
+        print "RUN a2enmod remoteip headers"
+        print "COPY ./.infrastructure/conf/apache/remoteip.conf /etc/apache2/conf-available/remoteip.conf"
+        print "RUN a2enconf remoteip"
+        next
+      }
+      { print }
+    ' "$dockerfile" > "${dockerfile}.tmp" && mv "${dockerfile}.tmp" "$dockerfile"
 }
 
 initialize_git_repository() {
@@ -47,177 +109,151 @@ initialize_git_repository() {
     echo "Initializing Git repository..."
     git init
 
-    # Exclude vendor from git
-    line_in_file --file ".gitignore" \
-        "/vendor" \
-        ".env*" \
-        "!.env.example" \
-        "public/wp-content/uploads/*"
+    configure_gitignore
 
     cd "$current_dir" || exit
 }
 
-process_selections() {
-    [[ $mariadb ]] && configure_mariadb
-    [[ $redis ]] && configure_redis
-    [[ $use_github_actions ]] && configure_github_actions
-    echo "Services configured."
-}
-
-select_features() {
+select_database() {
     while true; do
         clear
-        echo "${BOLD}${YELLOW}Select which features you'd like to use:${RESET}"
-        echo -e "${redis:+$BOLD$BLUE}1) Redis${RESET}"
-        echo "Press a number to select/deselect."
-        echo "Press ${BOLD}${BLUE}ENTER${RESET} to continue or skip."
+        echo "${BOLD}${YELLOW}Which database engine would you like to use?${RESET}"
+        echo -e "${mariadb:+$BOLD$BLUE}1) MariaDB (Default)${RESET}"
+        echo -e "${mysql:+$BOLD$BLUE}2) MySQL${RESET}"
+        echo ""
+        echo "Press a number to toggle. Press ${BOLD}${BLUE}ENTER${RESET} to continue."
 
-        read -s -r -n 1 key
+        read -s -n 1 key
         case $key in
         1)
-            [[ $redis ]] && redis="" || redis="1"
+            mariadb="1"
+            mysql=""
+            ;;
+        2)
+            mariadb=""
+            mysql="1"
             ;;
         '') break ;;
         esac
     done
 }
 
-select_github_actions() {
-    while true; do
-        clear
-        echo "${BOLD}${YELLOW}Would you like to use GitHub Actions?${RESET}"
-        if [ "$use_github_actions" = "1" ]; then
-            echo -e "${BOLD}${BLUE}1) Yes${RESET}"
-            echo "2) No"
-        else
-            echo "1) Yes"
-            echo -e "${BOLD}${BLUE}2) No${RESET}"
-        fi
-        echo "Press a number to select/deselect."
-        echo "Press ${BOLD}${BLUE}ENTER${RESET} to continue."
-
-        read -s -n 1 key
-        case $key in
-            1) use_github_actions="1";;
-            2) use_github_actions="" ;;
-            '') break ;;
-        esac
-    done
-}
-
 select_php_extensions() {
     clear
-    echo "${BOLD}${YELLOW}What PHP extensions would you like to include?${RESET}"
+    echo "${BOLD}${YELLOW}Additional PHP extensions?${RESET}"
     echo ""
-    echo "${BLUE}Default extensions:${RESET}"
-    echo "ctype, curl, dom, fileinfo, filter, hash, mbstring, mysqli,"
-    echo "opcache, openssl, pcntl, pcre, pdo_mysql, pdo_pgsql, redis,"
-    echo "session, tokenizer, xml, zip"
+    echo "${BLUE}Default extensions already included:${RESET}"
+    echo "${php_extensions[*]}"
+    if [[ "$SPIN_PHP_VARIATION" == *"frankenphp"* ]]; then
+        echo ""
+        echo "${DIM}Automatically added for FrankenPHP:${RESET}"
+        echo "${DIM}- mysqli${RESET}"
+        echo "${DIM}- pdo_mysql${RESET}"
+    fi
     echo ""
     echo "${BLUE}See available extensions:${RESET}"
     echo "https://serversideup.net/docker-php/available-extensions"
     echo ""
-    echo "Enter additional extensions as a comma-separated list (no spaces).${RESET}"
-    echo "Example: gd,imagick,intl"
-    echo ""
-    echo "${BOLD}${YELLOW}Enter comma separated extensions below or press ${BOLD}${BLUE}ENTER${RESET} ${BOLD}${YELLOW}to use default extensions.${RESET}"
+    echo "Enter additional extensions (comma-separated, no spaces) or press ${BOLD}${BLUE}ENTER${RESET} to keep defaults."
     read -r extensions_input
 
-    # Remove spaces and split into array
-    IFS=',' read -r -a php_extensions <<<"${extensions_input// /}"
-
-    # Print selected extensions for confirmation
-    while true; do
-        if [ ${#php_extensions[@]} -gt 0 ]; then
-            clear
-            echo "${BOLD}${YELLOW}These extensions names must be supported in the PHP version you selected.${RESET}"
-            echo "Learn more here: https://serversideup.net/docker-php/available-extensions"
-            echo ""
-            echo "${BLUE}PHP Version:${RESET} $SPIN_PHP_VERSION"
-            echo "${BLUE}Extensions:${RESET}"
-            for extension in "${php_extensions[@]}"; do
-                echo "- $extension"
-            done
-            echo ""
-            echo "${BOLD}${YELLOW}Are these selections correct?${RESET}"
-            echo "Press ${BOLD}${BLUE}ENTER${RESET} to continue or ${BOLD}${BLUE}any other key${RESET} to go back and change selections."
-            read -n 1 -s -r key
-            echo
-
-            if [[ $key == "" ]]; then
-                echo "${GREEN}Continuing with selected extensions...${RESET}"
-                break
-            else
-                echo "${YELLOW}Returning to extension selection...${RESET}"
-                select_php_extensions
-                return
-            fi
-        else
-            break
-        fi
-    done
+    if [[ -n "$extensions_input" ]]; then
+        IFS=',' read -r -a additional_exts <<<"${extensions_input// /}"
+        php_extensions+=("${additional_exts[@]}")
+    fi
 }
 
-set_colors() {
-    if [[ -t 1 ]]; then
-        RAINBOW="
-            $(printf '\033[38;5;196m')
-            $(printf '\033[38;5;202m')
-            $(printf '\033[38;5;226m')
-            $(printf '\033[38;5;082m')
-            "
-        RED=$(printf '\033[31m')
-        GREEN=$(printf '\033[32m')
-        YELLOW=$(printf '\033[33m')
-        BLUE=$(printf '\033[34m')
-        DIM=$(printf '\033[2m')
-        BOLD=$(printf '\033[1m')
-        RESET=$(printf '\033[m')
-    else
-        RAINBOW=""
-        RED=""
-        GREEN=""
-        YELLOW=""
-        BLUE=""
-        DIM=""
-        BOLD=""
-        RESET=""
-    fi
+configure_mariadb() {
+    local service_name="mariadb"
+    merge_blocks "$service_name"
+
+    line_in_file --action replace --file "$project_dir/.env" --file "$project_dir/.env.example" "DATABASE_HOST" "DATABASE_HOST=$service_name"
+    echo "Configuring MariaDB... Done."
+}
+
+configure_mysql() {
+    local service_name="mysql"
+    merge_blocks "$service_name"
+
+    line_in_file --action replace --file "$project_dir/.env" --file "$project_dir/.env.example" "DATABASE_HOST" "DATABASE_HOST=$service_name"
+    echo "Configuring MySQL... Done."
 }
 
 configure_wordpress() {
     echo "Configuring WordPress..."
-    source "$project_dir/configure-wordpress.sh"
-    rm "$project_dir/configure-wordpress.sh"
-    mv "$project_dir/load-environment.php" "$project_dir/public/load-environment.php"
+    # Support for the custom WordPress config script in your template
+    if [ -f "$project_dir/configure-wordpress.sh" ]; then
+        source "$project_dir/configure-wordpress.sh"
+        rm "$project_dir/configure-wordpress.sh"
+    fi
 
-    local current_dir=""
-    current_dir=$(pwd)
-
-    cd "$project_dir" || exit
-
-    line_in_file --file ".dockerignore" \
-        "public/wp-content/" \
-        "!public/wp-content/languages" \
-        "!public/wp-content/plugins" \
-        "!public/wp-content/themes"
-
-    cd "$current_dir" || exit
+    [ -f "$project_dir/load-environment.php" ] && mv "$project_dir/load-environment.php" "$project_dir/public/load-environment.php"
 
     echo "Done configuring WordPress."
 }
 
-###############################################
-# Functions
-###############################################
-configure_github_actions() {
-    local service_name="github-actions"
-    merge_blocks "$service_name"
+configure_gitignore() {
+    local ignore_content
+    ignore_content="# secrets / infra
+# secrets / env
+.vault-password
+.spin.yml
+.env*
+!.env.example
+
+# dependencies
+/vendor
+
+# WordPress runtime data (never in Git)
+public/wp-content/uploads/*
+!public/wp-content/uploads/.gitkeep
+
+public/wp-content/cache
+public/wp-content/wp-rocket-config
+public/wp-content/upgrade
+public/wp-content/ai1wm-backups
+public/wp-content/backups
+
+# Optional: logs if any plugin writes them
+public/wp-content/*.log"
+
+    # Write it to the destination
+    echo "$ignore_content" > "$project_dir/.gitignore"
 }
 
-configure_mariadb() {
-    # TODO
-    echo "Configuring maria db... Done."
+configure_dockerignore() {
+    local ignore_content
+    ignore_content="# secrets / infra
+.vault-password
+.git
+.github
+.gitlab-ci.yml
+.spin*
+.infrastructure
+!.infrastructure/**/local-ca.pem
+!.infrastructure/conf/apache/**
+!.infrastructure/conf/frankenphp/**
+
+# docker files
+Dockerfile
+docker-*.yml
+
+# WordPress runtime artifacts (never in image)
+public/wp-content/uploads
+public/wp-content/cache
+public/wp-content/wp-rocket-config
+public/wp-content/upgrade
+public/wp-content/ai1wm-backups
+public/wp-content/backups
+
+# Keep immutable WP assets in the image
+!public/wp-content/languages
+!public/wp-content/plugins
+!public/wp-content/themes
+!public/wp-content/object-cache.php"
+
+    # Write it to the destination
+    echo "$ignore_content" > "$project_dir/.dockerignore"
 }
 
 configure_redis() {
@@ -250,8 +286,7 @@ merge_blocks() {
         exit 1
     fi
 
-    echo "${BLUE}Updating files for $service_name...${RESET}"
-
+    echo "${BLUE}Merging configuration for $service_name...${RESET}"
     find "$blocks_dir" -type f | while read -r block; do
         # Extract the relative path of the file within the blocks directory
         local rel_path=${block#"$blocks_dir/"}
@@ -264,22 +299,10 @@ merge_blocks() {
 
         # Check if the file is a YAML file
         if [[ "$block" =~ \.(yml|yaml)$ ]]; then
-            # If the destination file doesn't exist, create it
-            if [[ ! -f "$destination" ]]; then
-                echo "{}" >"$destination"
-            fi
-
-            # Get relative paths for Docker volume mounts
+            [[ ! -f "$destination" ]] && echo "{}" >"$destination"
             local rel_block="${block#"${template_src_dir_absolute}/"}"
             local rel_destination="${destination#"${project_dir}/"}"
-
-            # Merge the block into the destination file, appending values
-            docker_yq eval-all \
-                'select(fileIndex == 0) * select(fileIndex == 1)' \
-                "/workdir/$rel_destination" "/src/$rel_block" \
-                -i
-
-            echo "$service_name: Updated ${rel_path}"
+            docker_yq eval-all 'select(fileIndex == 0) * select(fileIndex == 1)' "/workdir/$rel_destination" "/src/$rel_block" -i
         else
             # For non-YAML files, simply copy the file
             cp "$block" "$destination"
@@ -288,47 +311,66 @@ merge_blocks() {
     done
 }
 
+process_selections() {
+    [[ $mysql ]] && configure_mysql
+    [[ $mariadb ]] && configure_mariadb
+    [[ $redis ]] && configure_redis
+    [[ $use_github_actions ]] && merge_blocks "github-actions"
+}
+
 ###############################################
 # Main
 ###############################################
 
 set_colors
 select_php_extensions
-select_features
-select_github_actions
+select_database
 
-# Clean up the screen before moving forward
+# Redis Selection
+while true; do
+    clear
+    echo "${BOLD}${YELLOW}Optional Features:${RESET}"
+    echo -e "${redis:+$BOLD$BLUE}1) Redis${RESET}"
+    echo -e "${use_github_actions:+$BOLD$BLUE}2) GitHub Actions${RESET}"
+    echo "Press number to toggle. Press ENTER to continue."
+    read -s -r -n 1 key
+    case $key in
+        1) [[ $redis ]] && redis="" || redis="1" ;;
+        2) [[ $use_github_actions ]] && use_github_actions="" || use_github_actions="1" ;;
+        '') break ;;
+    esac
+done
+
 clear
 
-# Set PHP Version of Project
-line_in_file --action replace --file "$project_dir/$php_dockerfile" "FROM serversideup" "FROM serversideup/php:${SPIN_PHP_VERSION}-fpm-apache AS base"
+# Set the Base Image in Dockerfile
+line_in_file --action replace --file "$project_dir/$php_dockerfile" "FROM serversideup" "FROM ${SPIN_PHP_DOCKER_BASE_IMAGE} AS base"
 
 # Add environment variables
 cp "$project_dir/.env.example" "$project_dir/.env"
+configure_dockerignore
 
-# Add PHP Extensions if available
-if [ ${#php_extensions[@]} -gt 0 ]; then
-    add_php_extensions
-fi
+# Apache-specific config
+add_apache_remoteip_config
 
-# Install Composer dependencies
+# ensure FrankenPHP includes DB drivers before writing Dockerfile
+ensure_frankenphp_mysql_extensions
+
+# Add PHP Extensions
+add_php_extensions
+
+# Handle Dependencies
 if [[ "$SPIN_INSTALL_DEPENDENCIES" == "true" ]]; then
-    docker pull "$SPIN_PHP_DOCKER_IMAGE"
-
-    if [[ "$SPIN_ACTION" == "init" ]]; then
-        echo "Re-installing composer dependencies..."
-        (cd $project_dir && spin run php composer install)
-    else
-        echo "Installing Dependencies..."
-        (cd $project_dir && spin run php composer require vlucas/phpdotenv)
-        (cd $project_dir && spin run php composer require serversideup/spin --dev)
-    fi
+    echo "Installing Composer dependencies..."
+    docker pull "$SPIN_PHP_DOCKER_INSTALLER_IMAGE"
+    (cd "$project_dir" && spin run php composer require vlucas/phpdotenv)
+    (cd "$project_dir" && spin run php composer require serversideup/spin --dev)
 fi
 
-# Process the user selections
+# 4. Process Docker Compose Merges
 process_selections
 
-# Configure APP_URL
+# Finalize WordPress
 configure_wordpress
 
 # Configure Server Contact

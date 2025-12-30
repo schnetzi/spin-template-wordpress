@@ -1,0 +1,16 @@
+services:
+
+  php:
+    depends_on:
+      mariadb:
+        condition: service_started
+
+  mariadb:
+    networks:
+      - development
+    volumes:
+      - ./.infrastructure/volume_data/mariadb/database_data/:/var/lib/mysql
+    ports:
+      - target: 3306
+        published: 3306
+        mode: host
