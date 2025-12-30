@@ -67,18 +67,6 @@ services:
         - "traefik.http.services.wordpress.loadbalancer.healthcheck.timeout=5s"
         - "traefik.http.services.wordpress.loadbalancer.healthcheck.scheme=https"
 
-  mariadb:
-    networks:
-      - web-public
-    deploy:
-      placement:
-        constraints:
-          - node.role==manager
-    volumes:
-      - mariadb_data:/var/lib/mysql
-      - mariadb_custom_conf:/etc/mysql/conf.d
-      - mariadb_shared:/shared
-
 configs:
   traefik:
     name: "traefik-${SPIN_MD5_HASH_TRAEFIK_YML}.yml"
@@ -86,9 +74,6 @@ configs:
 
 volumes:
   certificates:
-  mariadb_data:
-  mariadb_custom_conf:
-  mariadb_shared:
   wp-uploads:
 
 networks:

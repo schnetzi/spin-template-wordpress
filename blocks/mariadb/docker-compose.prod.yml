@@ -1,0 +1,38 @@
+services:
+
+  mariadb:
+    networks:
+      - web-public
+    deploy:
+      placement:
+        constraints:
+          - node.role==manager
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - mariadb_custom_conf:/etc/mysql/conf.d
+      - mariadb_shared:/shared
+
+  ssh:
+    # We use an SSH image so we can securely tunnel into the Docker network with
+    # tools like Sequel Pro, TablePlus, Sequel Ace, etc.
+    # Learn more how to secure your tunnel here: https://github.com/serversideup/docker-ssh
+    image: serversideup/docker-ssh:v3
+    ports:
+      - target: 2222
+        published: 2222
+        mode: host
+    environment:
+      # Be sure to set the authorized keys in the .env file or GitHub Actions secrets
+      AUTHORIZED_KEYS: "${AUTHORIZED_KEYS}"
+      # You can lock to a specific IP too (AllowUsers tunnel@1.2.3.4)
+      ALLOWED_IPS: "AllowUsers tunnel"
+    volumes:
+      - tunnel_ssh_host_keys:/etc/ssh/ssh_host_keys
+    networks:
+        - web-public
+
+volumes:
+  mariadb_data:
+  mariadb_custom_conf:
+  mariadb_shared:
+  tunnel_ssh_host_keys:

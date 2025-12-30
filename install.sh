@@ -7,10 +7,12 @@ set -e # Exit on error
 # Capture input arguments
 wordpress_framework_args=("$@")
 
-# Default PHP Docker Image
-SPIN_PHP_VERSION="${SPIN_PHP_VERSION:-8.4}"
-SPIN_PHP_DOCKER_IMAGE="${SPIN_PHP_DOCKER_IMAGE:-serversideup/php:${SPIN_PHP_VERSION}-cli}"
-export SPIN_PHP_DOCKER_IMAGE
+# Default PHP Settings
+SPIN_PHP_VERSION="${SPIN_PHP_VERSION:-8.5}"
+SPIN_PHP_DOCKER_IMAGE_PREFIX="${SPIN_PHP_DOCKER_IMAGE_PREFIX:-}"
+# These will be built dynamically via functions
+SPIN_PHP_DOCKER_INSTALLER_IMAGE=""
+SPIN_PHP_DOCKER_BASE_IMAGE=""
 
 # Set project files
 declare -a spin_project_files=(
@@ -86,7 +88,7 @@ display_destructive_action_warning() {
 project_files_exist() {
   local -a files=("$@")
   for item in "${files[@]}"; do
-    if compgen -G "$SPIN_PROJECT_DIRECTORY/$item" >/dev/null; then
+    if compgen -G "$SPIN_PROJECT_DIRECTORY/$item" > /dev/null; then
       return 0 # True: At least one matching file exists
     fi
   done
@@ -94,30 +96,12 @@ project_files_exist() {
 }
 
 prompt_php_version() {
-  local php_versions=("8.4" "8.3" "8.2" "8.1" "8.0" "7.4")
+  local php_versions=("8.5" "8.4" "8.3")
   local php_choice
-
-  # If SPIN_ACTION is "new", filter out versions below 8.2
-  if [ "$SPIN_ACTION" == "new" ]; then
-    php_versions=("8.4" "8.3" "8.2")
-  fi
 
   while true; do
     clear
-    printf '%s      ___     %s      ___   %s            %s      ___     %s\n' $RAINBOW $RESET
-    printf '%s     /  /\    %s     /  /\  %s    ___     %s     /__/\    %s\n' $RAINBOW $RESET
-    printf '%s    /  /:/_   %s    /  /::\ %s   /  /\    %s     \  \:\   %s\n' $RAINBOW $RESET
-    printf '%s   /  /:/ /\  %s   /  /:/\:\%s  /  /:/    %s      \  \:\  %s\n' $RAINBOW $RESET
-    printf '%s  /  /:/ /::\ %s  /  /:/~/:/%s /__/::\    %s  _____\__\:\ %s\n' $RAINBOW $RESET
-    printf '%s /__/:/ /:/\:\%s /__/:/ /:/ %s \__\/\:\__ %s /__/::::::::\%s\n' $RAINBOW $RESET
-    printf '%s \  \:\/:/~/:/%s \  \:\/:/  %s    \  \:\/\%s \  \:\~~\~~\/%s\n' $RAINBOW $RESET
-    printf '%s  \  \::/ /:/ %s  \  \::/   %s     \__\::/%s  \  \:\  ~~~ %s\n' $RAINBOW $RESET
-    printf '%s   \__\/ /:/  %s   \  \:\   %s     /__/:/ %s   \  \:\     %s\n' $RAINBOW $RESET
-    printf '%s     /__/:/   %s    \  \:\  %s     \__\/  %s    \  \:\    %s\n' $RAINBOW $RESET
-    printf '%s     \__\/    %s     \__\/  %s            %s     \__\/    %s\n' $RAINBOW $RESET
-    printf '\n'
-    printf "%s %s %s\n" "${BOLD}🚀 Let's get Laravel launched!"
-    printf '%s\n' $RESET
+    show_header
     echo "${BOLD}${YELLOW}👉 What PHP version would you like to use?${RESET}"
 
     for i in "${!php_versions[@]}"; do
@@ -150,10 +134,121 @@ prompt_php_version() {
   echo "${BOLD}${GREEN}✅ PHP $SPIN_PHP_VERSION selected.${RESET}"
 
   export SPIN_PHP_VERSION
-  export SPIN_PHP_DOCKER_IMAGE="serversideup/php:${SPIN_PHP_VERSION}-cli"
-
   sleep 1
 }
+
+prompt_php_variation() {
+    local variations=("fpm-apache" "frankenphp")
+    local variation_descriptions=(
+        "PHP-FPM + Apache (Ideal for WordPress, .htaccess support)"
+        "FrankenPHP (Modern, high performance, HTTP/3)"
+    )
+    local variation_choice
+
+    # Set default if not already set
+    [[ -z "$SPIN_PHP_VARIATION" ]] && SPIN_PHP_VARIATION="fpm-apache"
+
+    while true; do
+        clear
+        show_header
+        echo "${BOLD}${YELLOW}👉 What server variation would you like to use?${RESET}"
+        echo ""
+
+        for i in "${!variations[@]}"; do
+            local variation="${variations[$i]}"
+            local description="${variation_descriptions[$i]}"
+            local display="$((i+1))) $variation"
+            [[ "$variation" == "${variations[0]}" ]] && display+=" ${DIM}${RESET}"
+
+            if [[ "$SPIN_PHP_VARIATION" == "$variation" ]]; then
+                echo -e "${BOLD}${BLUE}$display${RESET}"
+                echo -e "   ${DIM}$description${RESET}"
+            else
+                echo -e "$display"
+                echo -e "   ${DIM}$description${RESET}"
+            fi
+            echo ""
+        done
+
+        echo "Press a number to select. Press ${BOLD}${BLUE}ENTER${RESET} to continue."
+
+        read -n 1 variation_choice
+        case $variation_choice in
+            [1-${#variations[@]}]) SPIN_PHP_VARIATION="${variations[$((variation_choice-1))]}" ;;
+            "")
+                [[ -n "$SPIN_PHP_VARIATION" ]] && break
+                echo "${BOLD}${RED}Please select a variation.${RESET}"
+                read -n 1 -r -p "Press any key to continue..."
+                ;;
+            *)
+                echo "${BOLD}${RED}Invalid choice. Please try again.${RESET}"
+                read -n 1 -r -p "Press any key to continue..."
+                ;;
+        esac
+    done
+
+    echo ""
+    echo "${BOLD}${GREEN}✅ $SPIN_PHP_VARIATION selected.${RESET}"
+    export SPIN_PHP_VARIATION
+    sleep 1
+}
+
+prompt_php_os() {
+    local os_options=("debian" "alpine")
+    local os_descriptions=(
+        "Debian (Stable, widely compatible, larger image)"
+        "Alpine (Lightweight, smaller image, minimal footprint)"
+    )
+    local os_choice
+
+    # Set default if not already set
+    [[ -z "$SPIN_PHP_OS" ]] && SPIN_PHP_OS="debian"
+
+    while true; do
+        clear
+        show_header
+        echo "${BOLD}${YELLOW}👉 What operating system would you like to use?${RESET}"
+        echo ""
+
+        for i in "${!os_options[@]}"; do
+            local os="${os_options[$i]}"
+            local description="${os_descriptions[$i]}"
+            local display="$((i+1))) $os"
+            [[ "$os" == "${os_options[0]}" ]] && display+=" ${DIM}${RESET}"
+
+            if [[ "$SPIN_PHP_OS" == "$os" ]]; then
+                echo -e "${BOLD}${BLUE}$display${RESET}"
+                echo -e "   ${DIM}$description${RESET}"
+            else
+                echo -e "$display"
+                echo -e "   ${DIM}$description${RESET}"
+            fi
+            echo ""
+        done
+
+        echo "Press a number to select. Press ${BOLD}${BLUE}ENTER${RESET} to continue."
+
+        read -n 1 os_choice
+        case $os_choice in
+            [1-${#os_options[@]}]) SPIN_PHP_OS="${os_options[$((os_choice-1))]}" ;;
+            "")
+                [[ -n "$SPIN_PHP_OS" ]] && break
+                echo "${BOLD}${RED}Please select an operating system.${RESET}"
+                read -n 1 -r -p "Press any key to continue..."
+                ;;
+            *)
+                echo "${BOLD}${RED}Invalid choice. Please try again.${RESET}"
+                read -n 1 -r -p "Press any key to continue..."
+                ;;
+        esac
+    done
+
+    echo ""
+    echo "${BOLD}${GREEN}✅ $SPIN_PHP_OS selected.${RESET}"
+    export SPIN_PHP_OS
+    sleep 1
+}
+
 
 download_wordpress() {
   local directory=$1
@@ -175,14 +270,46 @@ download_wordpress() {
   echo "WordPress downloaded and extracted."
 }
 
+show_header() {
+    printf '%s      ___     %s      ___   %s            %s      ___     %s\n'      $RAINBOW $RESET
+    printf '%s     /  /\    %s     /  /\  %s    ___     %s     /__/\    %s\n'      $RAINBOW $RESET
+    printf '%s    /  /:/_   %s    /  /::\ %s   /  /\    %s     \  \:\   %s\n'      $RAINBOW $RESET
+    printf '%s   /  /:/ /\  %s   /  /:/\:\%s  /  /:/    %s      \  \:\  %s\n'      $RAINBOW $RESET
+    printf '%s  /  /:/ /::\ %s  /  /:/~/:/%s /__/::\    %s  _____\__\:\ %s\n'      $RAINBOW $RESET
+    printf '%s /__/:/ /:/\:\%s /__/:/ /:/ %s \__\/\:\__ %s /__/::::::::\%s\n'      $RAINBOW $RESET
+    printf '%s \  \:\/:/~/:/%s \  \:\/:/  %s    \  \:\/\%s \  \:\~~\~~\/%s\n'      $RAINBOW $RESET
+    printf '%s  \  \::/ /:/ %s  \  \::/   %s     \__\::/%s  \  \:\  ~~~ %s\n'      $RAINBOW $RESET
+    printf '%s   \__\/ /:/  %s   \  \:\   %s     /__/:/ %s   \  \:\     %s\n'      $RAINBOW $RESET
+    printf '%s     /__/:/   %s    \  \:\  %s     \__\/  %s    \  \:\    %s\n'      $RAINBOW $RESET
+    printf '%s     \__\/    %s     \__\/  %s            %s     \__\/    %s\n'      $RAINBOW $RESET
+    printf '\n'
+    printf "%s\n" "${BOLD}🚀 Let's get WordPress launched!"
+    printf '%s\n' $RESET
+}
+
+assemble_php_docker_image() {
+    # For debian, we don't include it in the tag (it's the default)
+    if [[ "$SPIN_PHP_OS" == "debian" ]]; then
+        export SPIN_PHP_DOCKER_INSTALLER_IMAGE="serversideup/php:${SPIN_PHP_DOCKER_IMAGE_PREFIX}${SPIN_PHP_VERSION}-cli"
+        export SPIN_PHP_DOCKER_BASE_IMAGE="serversideup/php:${SPIN_PHP_DOCKER_IMAGE_PREFIX}${SPIN_PHP_VERSION}-${SPIN_PHP_VARIATION}"
+    else
+        export SPIN_PHP_DOCKER_INSTALLER_IMAGE="serversideup/php:${SPIN_PHP_DOCKER_IMAGE_PREFIX}${SPIN_PHP_VERSION}-cli-${SPIN_PHP_OS}"
+        export SPIN_PHP_DOCKER_BASE_IMAGE="serversideup/php:${SPIN_PHP_DOCKER_IMAGE_PREFIX}${SPIN_PHP_VERSION}-${SPIN_PHP_VARIATION}-${SPIN_PHP_OS}"
+    fi
+
+    echo ""
+    echo "${BOLD}${BLUE}📦 Docker Base Image:${RESET} $SPIN_PHP_DOCKER_BASE_IMAGE"
+    echo ""
+    sleep 1
+}
+
 ###############################################
 # Main Spin Action Functions
 ###############################################
 
 # Default function to run for new projects
 new() {
-  docker pull "$SPIN_PHP_DOCKER_IMAGE"
-
+  docker pull "$SPIN_PHP_DOCKER_INSTALLER_IMAGE"
   download_wordpress "$SPIN_PROJECT_DIRECTORY/public"
 
   init --force
@@ -222,7 +349,11 @@ init() {
 # Main: Where we call the functions
 ###############################################
 
+prompt_php_variation
 prompt_php_version
+prompt_php_os
+assemble_php_docker_image
+
 SERVER_CONTACT=$(prompt_and_update_file \
     --title "🤖 Server Contact" \
     --details "Set an email contact who should be notified for Let's Encrypt SSL renewals and other system alerts." \

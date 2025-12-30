@@ -56,7 +56,7 @@ defined('DB_USER') or define('DB_USER', \$_ENV['DATABASE_USER']);
 defined('DB_PASSWORD') or define('DB_PASSWORD', \$_ENV['DATABASE_PASSWORD']);
 
 /** Database hostname */
-define( 'DB_HOST', 'mariadb' );
+defined('DB_HOST') or define('DB_HOST', \$_ENV['DATABASE_HOST']);
 
 /** Database charset to use in creating database tables. */
 define( 'DB_CHARSET', 'utf8' );

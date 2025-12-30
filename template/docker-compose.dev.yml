@@ -27,9 +27,6 @@ services:
       - .:/var/www/html/
     networks:
       - development
-    depends_on:
-      mariadb:
-        condition: service_started
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.wordpress.rule=Host(`wordpress.dev.test`)"
@@ -38,21 +35,6 @@ services:
       - "traefik.http.routers.wordpress.tls=true"
       - "traefik.http.services.wordpress.loadbalancer.server.port=8443"
       - "traefik.http.services.wordpress.loadbalancer.server.scheme=https"
-
-  mariadb:
-    hostname: "wordpress_mariadb"
-    networks:
-      - development
-    volumes:
-      # Add volume for all database files
-      - ./.infrastructure/volume_data/mysql/database_data/:/var/lib/mysql
-      # Add volume for custom configurations
-      - ./.infrastructure/volume_data/mysql/conf.d/:/etc/mysql/conf.d
-      - ./.infrastructure/volume_data/mysql/docker-entrypoint-initdb.d/:/docker-entrypoint-initdb.d
-    ports:
-      - target: 3306
-        published: 3306
-        mode: host
 
   mailpit:
     image: axllent/mailpit

@@ -1,0 +1,11 @@
+services:
+  mysql:
+    environment:
+      MYSQL_ROOT_PASSWORD: "cirootpassword"
+      MYSQL_DATABASE: "cidatabase"
+      MYSQL_USER: "ciuser"
+      MYSQL_PASSWORD: "cipassword"
+
+  php:
+    depends_on:
+      - mysql
