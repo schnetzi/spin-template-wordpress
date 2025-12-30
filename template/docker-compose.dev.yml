@@ -8,6 +8,7 @@ services:
       development:
         aliases:
           - wordpress.dev.test
+          - mailpit.dev.test
     volumes:
       # Mount the Docker socket as read-only so Traefik can listen to events
       - /var/run/docker.sock:/var/run/docker.sock:ro

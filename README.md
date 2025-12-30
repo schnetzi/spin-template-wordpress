@@ -1,8 +1,8 @@
 # 🏆 WordPress Template for Spin
 This is a template for WordPress for Spin. It should help make spinning up new WordPress projects easier than ever.
 
-- Different versions of PHP selectable (8.4, 8.3, 8.2)
-- MariaDb
+- Different versions of PHP selectable (8.5, 8.4, 8.3) and [FrankenPHP](https://frankenphp.dev/)
+- MariaDb or MySQL
 - Redis for improved WP performance
 - Github Actions for automatic deployments
 - Spin features for provision and deploy in minutes
@@ -16,7 +16,7 @@ spin new schnetzi/spin-template-wordpress my-wordpress-app
 
 ### 🌎 Default Development URLs
 - **WordPress**: [https://wordpress.dev.test](https://wordpress.dev.test)
-- **Mailpit**: [http://localhost:8025](http://localhost:8025)
+- **Mailpit**: [https://mailpit.dev.test](http://localhost:8025)
 
 ## 👉 Required Changes Before Using This Template
 > [!CAUTION]
