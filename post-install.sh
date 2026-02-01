@@ -92,7 +92,7 @@ add_apache_remoteip_config() {
 
     awk '
       $0 ~ /^# SPIN_APACHE_REMOTEIP_BLOCK$/ {
-        print "RUN a2enmod remoteip headers"
+        print "RUN a2enmod remoteip headers expires"
         print "COPY ./.infrastructure/conf/apache/remoteip.conf /etc/apache2/conf-available/remoteip.conf"
         print "RUN a2enconf remoteip"
         next
